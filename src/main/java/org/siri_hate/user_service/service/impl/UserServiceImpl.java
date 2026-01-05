@@ -1,5 +1,6 @@
 package org.siri_hate.user_service.service.impl;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityNotFoundException;
 import org.siri_hate.user_service.model.auth.YandexUserInfo;
 import org.siri_hate.user_service.model.dto.request.auth.LoginForm;
@@ -33,19 +34,20 @@ public class UserServiceImpl implements UserService {
     private final AuthenticationManager authenticationManager;
     private final JWTService jwtService;
     private final MemberRepository memberRepository;
-    private final WebClient webClient;
+    private WebClient webClient;
 
     @Autowired
-    public UserServiceImpl(
-            UserRepository userRepository,
-            AuthenticationManager authenticationManager,
-            JWTService jwtService,
-            MemberRepository memberRepository) {
+    public UserServiceImpl(UserRepository userRepository, AuthenticationManager authenticationManager, JWTService jwtService, MemberRepository memberRepository) {
         this.userRepository = userRepository;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.memberRepository = memberRepository;
-        this.webClient = WebClient.builder()
+    }
+
+    @PostConstruct
+    public void init() {
+        webClient = WebClient
+                .builder()
                 .baseUrl("https://login.yandex.ru")
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
                 .build();
@@ -56,10 +58,8 @@ public class UserServiceImpl implements UserService {
         newMember.setUsername(yandexUserInfo.getLogin());
         newMember.setName(yandexUserInfo.getDisplayName());
         newMember.setEmail(yandexUserInfo.getDefaultEmail());
-        newMember.setPhone(
-                yandexUserInfo.getDefaultPhone() != null ? yandexUserInfo.getDefaultPhone().getNumber()
-                        : "");
-        newMember.setRole(UserRole.MEMBER.name());
+        newMember.setPhone(yandexUserInfo.getDefaultPhone() != null ? yandexUserInfo.getDefaultPhone().getNumber() : "");
+        newMember.setRole(UserRole.MEMBER);
         newMember.setEnabled(true);
         newMember.setAuthType(AuthType.YANDEX);
         newMember.setProfileHiddenFlag(false);
@@ -70,15 +70,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserLoginResponse userLogin(LoginForm loginForm) {
-        Authentication authentication =
-                authenticationManager.authenticate(
-                        new UsernamePasswordAuthenticationToken(
-                                loginForm.getUsername(), loginForm.getPassword()));
+        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginForm.getUsername(), loginForm.getPassword()));
         if (authentication.isAuthenticated()) {
-            String token = jwtService.generateToken(loginForm.getUsername(),
-                    authentication.getAuthorities());
+            String token = jwtService.generateToken(loginForm.getUsername(), authentication.getAuthorities());
             String role = authentication.getAuthorities().iterator().next().getAuthority();
-            return new UserLoginResponse(loginForm.getUsername(), token, role);
+            return new UserLoginResponse(loginForm.getUsername(), token, UserRole.valueOf(role));
         } else {
             throw new UsernameNotFoundException("Invalid user request!");
         }
@@ -86,12 +82,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserLoginResponse userLoginViaYandex(YandexAuthRequest request) {
-        YandexUserInfo yandexUserInfo = webClient.get()
-                .uri("/info")
-                .header("Authorization", "OAuth " + request.getToken())
-                .retrieve()
-                .bodyToMono(YandexUserInfo.class)
-                .block();
+
+        YandexUserInfo yandexUserInfo = webClient.get().uri("/info").header("Authorization", "OAuth " + request.getToken()).retrieve().bodyToMono(YandexUserInfo.class).block();
 
         if (yandexUserInfo == null) {
             throw new UsernameNotFoundException("Failed to get user info from Yandex");
@@ -100,8 +92,7 @@ public class UserServiceImpl implements UserService {
         Member existingMember = memberRepository.findMemberByEmail(yandexUserInfo.getDefaultEmail());
 
         if (existingMember != null) {
-            String token = jwtService.generateToken(existingMember.getUsername(),
-                    existingMember.getAuthorities());
+            String token = jwtService.generateToken(existingMember.getUsername(), existingMember.getAuthorities());
             return new UserLoginResponse(existingMember.getUsername(), token, existingMember.getRole());
         }
 
@@ -131,8 +122,7 @@ public class UserServiceImpl implements UserService {
             currentUserResponse.setUsername(foundUser.getUsername());
             currentUserResponse.setRole(foundUser.getRole());
         } else {
-            throw new EntityNotFoundException(
-                    "User not found with username: " + authentication.getName());
+            throw new EntityNotFoundException("User not found with username: " + authentication.getName());
         }
 
         return currentUserResponse;

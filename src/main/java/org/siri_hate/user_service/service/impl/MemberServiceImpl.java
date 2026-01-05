@@ -2,7 +2,6 @@ package org.siri_hate.user_service.service.impl;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
-import org.siri_hate.user_service.service.KafkaProducerService;
 import org.siri_hate.user_service.model.dto.mapper.MemberMapper;
 import org.siri_hate.user_service.model.dto.request.auth.ChangePasswordForm;
 import org.siri_hate.user_service.model.dto.request.auth.RecoveryPasswordRequest;
@@ -16,6 +15,8 @@ import org.siri_hate.user_service.model.enums.UserRole;
 import org.siri_hate.user_service.repository.MemberRepository;
 import org.siri_hate.user_service.repository.adapters.MemberSpecification;
 import org.siri_hate.user_service.service.ConfirmationService;
+import org.siri_hate.user_service.service.FileService;
+import org.siri_hate.user_service.service.KafkaProducerService;
 import org.siri_hate.user_service.service.MemberService;
 import org.siri_hate.user_service.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -38,21 +40,17 @@ public class MemberServiceImpl implements MemberService {
     private final NotificationService notificationService;
     private final MemberMapper memberMapper;
     private final KafkaProducerService kafkaProducerService;
+    private final FileService fileService;
 
     @Autowired
-    private MemberServiceImpl(
-            MemberRepository memberRepository,
-            PasswordEncoder passwordEncoder,
-            @Lazy ConfirmationService confirmationService,
-            NotificationService notificationService,
-            MemberMapper memberMapper,
-            KafkaProducerService kafkaProducerService) {
+    private MemberServiceImpl(MemberRepository memberRepository, PasswordEncoder passwordEncoder, @Lazy ConfirmationService confirmationService, NotificationService notificationService, MemberMapper memberMapper, KafkaProducerService kafkaProducerService, FileService fileService) {
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
         this.confirmationService = confirmationService;
         this.notificationService = notificationService;
         this.memberMapper = memberMapper;
         this.kafkaProducerService = kafkaProducerService;
+        this.fileService = fileService;
     }
 
     @Override
@@ -63,7 +61,7 @@ public class MemberServiceImpl implements MemberService {
             throw new RuntimeException("Member with provided email or phone already exists!");
         }
         memberEntity.setPassword(passwordEncoder.encode(memberEntity.getPassword()));
-        memberEntity.setRole(UserRole.MEMBER.name());
+        memberEntity.setRole(UserRole.MEMBER);
         memberEntity.setAuthType(AuthType.PASSWORD);
         memberEntity.setProfileHiddenFlag(false);
         memberRepository.save(memberEntity);
@@ -95,8 +93,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
-    public void memberPasswordRecoveryConfirmation(
-            ChangePasswordTokenRequest changePasswordTokenRequest) {
+    public void memberPasswordRecoveryConfirmation(ChangePasswordTokenRequest changePasswordTokenRequest) {
         String token = changePasswordTokenRequest.getToken();
         String newPassword = changePasswordTokenRequest.getNewPassword();
         Long userId = confirmationService.getUserIdByToken(token);
@@ -130,10 +127,8 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
-    public Page<MemberSummaryResponse> getAllMembers(
-            String username, String specialization, Boolean profileHiddenFlag, Pageable pageable) {
-        Specification<Member> spec =
-                (root, query, criteriaBuilder) -> criteriaBuilder.conjunction();
+    public Page<MemberSummaryResponse> getAllMembers(String username, String specialization, Boolean profileHiddenFlag, Pageable pageable) {
+        Specification<Member> spec = (root, query, criteriaBuilder) -> criteriaBuilder.conjunction();
 
         if (username != null && !username.isEmpty()) {
             spec = spec.and(MemberSpecification.usernameStartsWithIgnoreCase(username));
@@ -145,17 +140,14 @@ public class MemberServiceImpl implements MemberService {
 
         if (profileHiddenFlag != null) {
             if (profileHiddenFlag) {
-                spec =
-                        spec.and(
-                                (root, query, criteriaBuilder) ->
-                                        criteriaBuilder.isTrue(root.get("profileHiddenFlag")));
+                spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.isTrue(root.get("profileHiddenFlag")));
             } else {
                 spec = spec.and(MemberSpecification.profileIsNotHidden());
             }
         }
 
         Page<Member> members = memberRepository.findAll(spec, pageable);
-        return memberMapper.toMemberSummaryResponsePage(members);
+        return members.map(this::toMemberSummaryResponseWithAvatar);
     }
 
     @Override
@@ -164,7 +156,7 @@ public class MemberServiceImpl implements MemberService {
         if (member.isEmpty()) {
             throw new EntityNotFoundException("Member with id: " + id + " not found!");
         }
-        return memberMapper.toMemberFullResponse(member.get());
+        return toMemberFullResponseWithAvatar(member.get());
     }
 
     @Override
@@ -173,30 +165,22 @@ public class MemberServiceImpl implements MemberService {
         if (member == null) {
             throw new EntityNotFoundException("Member with username: " + username + " not found!");
         }
-        return memberMapper.toMemberFullResponse(member);
+        return toMemberFullResponseWithAvatar(member);
     }
 
     @Override
     @Transactional
     public MemberFullResponse memberUpdate(Long id, MemberFullRequest member) {
-        Member currentMember =
-                memberRepository
-                        .findById(id)
-                        .orElseThrow(
-                                () -> new EntityNotFoundException("Member with id: " + id + " not found!"));
+        Member currentMember = memberRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Member with id: " + id + " not found!"));
         Member updatedMember = memberMapper.memberUpdateFullData(member, currentMember);
         memberRepository.save(updatedMember);
-        return memberMapper.toMemberFullResponse(updatedMember);
+        return toMemberFullResponseWithAvatar(updatedMember);
     }
 
     @Override
     @Transactional
     public void deleteMemberById(Long id) {
-        Member member =
-                memberRepository
-                        .findById(id)
-                        .orElseThrow(
-                                () -> new EntityNotFoundException("Member with id: " + id + " not found!"));
+        Member member = memberRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Member with id: " + id + " not found!"));
 
         String username = member.getUsername();
         memberRepository.delete(member);
@@ -219,49 +203,59 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     @Transactional
-    public void memberChangeAvatar(String username, MemberChangeAvatarRequest avatar) {
+    public void memberChangeAvatar(String username, MultipartFile file) {
         Member member = memberRepository.findMemberByUsername(username);
         if (Objects.isNull(member)) {
             throw new EntityNotFoundException("Member with username: " + username + " not found!");
         }
-        Member updatedMember = memberMapper.memberUpdateAvatar(avatar, member);
-        memberRepository.save(updatedMember);
+        String avatarKey = fileService.uploadAvatar(username, file);
+        member.setAvatarUrl(avatarKey);
+        memberRepository.save(member);
     }
 
     @Override
     @Transactional
-    public MemberFullResponse memberChangePersonalInfo(
-            String username, MemberProfileDataRequest profileDataRequest) {
+    public MemberFullResponse memberChangePersonalInfo(String username, MemberProfileDataRequest profileDataRequest) {
         Member member = memberRepository.findMemberByUsername(username);
         if (member == null) {
             throw new EntityNotFoundException("Member with username: " + username + " not found!");
         }
         Member updatedMember = memberMapper.memberUpdateProfileData(profileDataRequest, member);
         memberRepository.save(updatedMember);
-        return memberMapper.toMemberFullResponse(updatedMember);
+        return toMemberFullResponseWithAvatar(updatedMember);
     }
 
     @Override
     @Transactional
-    public MemberFullResponse changeMemberProfileVisibility(
-            MemberChangeProfileVisibilityRequest request, String username) {
+    public MemberFullResponse changeMemberProfileVisibility(MemberChangeProfileVisibilityRequest request, String username) {
         Member member = memberRepository.findMemberByUsername(username);
         if (Objects.isNull(member)) {
             throw new EntityNotFoundException("Member with username: " + username + " not found!");
         }
         member.setProfileHiddenFlag(request.getProfileHiddenFlag());
         memberRepository.save(member);
-        return memberMapper.toMemberFullResponse(member);
+        return toMemberFullResponseWithAvatar(member);
     }
 
     @Override
     public Page<MemberSummaryResponse> searchMembersByName(String name, Pageable pageable) {
-        Specification<Member> spec =
-                MemberSpecification.nameStartsWithIgnoreCase(name);
+        Specification<Member> spec = MemberSpecification.nameStartsWithIgnoreCase(name);
         Page<Member> members = memberRepository.findAll(spec, pageable);
         if (members.isEmpty()) {
             throw new RuntimeException("No members found");
         }
-        return memberMapper.toMemberSummaryResponsePage(members);
+        return members.map(this::toMemberSummaryResponseWithAvatar);
+    }
+
+    private MemberFullResponse toMemberFullResponseWithAvatar(Member member) {
+        MemberFullResponse response = memberMapper.toMemberFullResponse(member);
+        response.setAvatarUrl(fileService.getAvatarUrl(member.getAvatarUrl()));
+        return response;
+    }
+
+    private MemberSummaryResponse toMemberSummaryResponseWithAvatar(Member member) {
+        MemberSummaryResponse response = memberMapper.toMemberSummaryResponse(member);
+        response.setAvatarUrl(fileService.getAvatarUrl(member.getAvatarUrl()));
+        return response;
     }
 }

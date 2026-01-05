@@ -10,14 +10,12 @@ public class SpecialistSpecialization {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", unique = true, nullable = false)
+    @Column(unique = true, nullable = false)
     private String name;
 
-    public SpecialistSpecialization() {
-    }
+    public SpecialistSpecialization() {}
 
-    public SpecialistSpecialization(Long id, String name) {
-        this.id = id;
+    public SpecialistSpecialization(String name) {
         this.name = name;
     }
 

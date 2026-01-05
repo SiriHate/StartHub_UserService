@@ -15,12 +15,14 @@ public class ProjectUpdateNotificationConsumerService {
 
     private final MemberRepository memberRepository;
     private final KafkaProducerService kafkaProducerService;
-    private final Gson gson = new Gson();
+    private final Gson gson;
 
     @Autowired
-    public ProjectUpdateNotificationConsumerService(MemberRepository memberRepository, KafkaProducerService kafkaProducerService) {
+    public ProjectUpdateNotificationConsumerService(MemberRepository memberRepository,
+                                                    KafkaProducerService kafkaProducerService, Gson gson) {
         this.memberRepository = memberRepository;
         this.kafkaProducerService = kafkaProducerService;
+        this.gson = gson;
     }
 
     @KafkaListener(topics = "${project.update.notification.topic.consumer}", groupId = "${spring.application.name}")

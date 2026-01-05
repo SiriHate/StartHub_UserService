@@ -18,9 +18,7 @@ import java.util.List;
 public class SpecialistSpecializationServiceImpl implements SpecialistSpecializationService {
 
     final private SpecialistSpecializationRepository specialistSpecializationRepository;
-
     final private SpecialistSpecializationMapper specialistSpecializationMapper;
-
 
     @Autowired
     public SpecialistSpecializationServiceImpl(

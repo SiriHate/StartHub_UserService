@@ -1,7 +1,7 @@
 package org.siri_hate.user_service.service.impl;
 
 import com.google.gson.Gson;
-import org.siri_hate.user_service.model.dto.kafka.UserDeletionMessage;
+import org.siri_hate.user_service.model.messages.UserDeletionMessage;
 import org.siri_hate.user_service.service.UserDeletionConsumerService;
 import org.siri_hate.user_service.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,12 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserDeletionConsumerServiceImpl implements UserDeletionConsumerService {
 
     private final UserService userService;
-
-    private final Gson gson = new Gson();
+    private final Gson gson;
 
     @Autowired
-    public UserDeletionConsumerServiceImpl(UserService userService) {
+    public UserDeletionConsumerServiceImpl(UserService userService, Gson gson) {
         this.userService = userService;
+        this.gson = gson;
     }
 
     @Override
@@ -26,7 +26,7 @@ public class UserDeletionConsumerServiceImpl implements UserDeletionConsumerServ
     @Transactional
     public void consumeUserDeletionMessage(String message) {
         UserDeletionMessage userDeletionMessage = gson.fromJson(message, UserDeletionMessage.class);
-        String username = userDeletionMessage.getUsername();
+        String username = userDeletionMessage.username();
         userService.deleteUserByUsername(username);
     }
-} 
+}

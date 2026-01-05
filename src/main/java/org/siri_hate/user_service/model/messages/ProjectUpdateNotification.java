@@ -9,8 +9,7 @@ public class ProjectUpdateNotification {
     private String userRealName;
     private String userEmailAddress;
 
-    public ProjectUpdateNotification() {
-    }
+    public ProjectUpdateNotification() {}
 
     public ProjectUpdateNotification(String projectName, String updateDate, String projectLink,
                                      String username, String userRealName, String userEmailAddress) {

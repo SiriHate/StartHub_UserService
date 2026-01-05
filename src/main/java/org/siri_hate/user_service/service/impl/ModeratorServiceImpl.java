@@ -2,6 +2,7 @@ package org.siri_hate.user_service.service.impl;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import org.siri_hate.user_service.model.enums.UserRole;
 import org.siri_hate.user_service.service.KafkaProducerService;
 import org.siri_hate.user_service.model.dto.mapper.ModeratorMapper;
 import org.siri_hate.user_service.model.dto.request.moderator.ModeratorFullRequest;
@@ -48,7 +49,7 @@ public class ModeratorServiceImpl implements ModeratorService {
         moderator1.setEmployeeId(moderator.getEmployeeId());
         moderator1.setPassword(moderator1.getPassword());
         moderator1.setPassword(passwordEncoder.encode(moderator.getPassword()));
-        moderator1.setRole("MODERATOR");
+        moderator1.setRole(UserRole.MODERATOR);
         moderatorRepository.save(moderator1);
     }
 

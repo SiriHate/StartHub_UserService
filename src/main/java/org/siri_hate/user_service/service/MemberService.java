@@ -8,6 +8,7 @@ import org.siri_hate.user_service.model.dto.response.member.MemberFullResponse;
 import org.siri_hate.user_service.model.dto.response.member.MemberSummaryResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface MemberService {
 
@@ -21,11 +22,7 @@ public interface MemberService {
 
     void memberPasswordChange(String username, ChangePasswordForm changePasswordForm);
 
-    Page<MemberSummaryResponse> getAllMembers(
-            String username,
-            String specialization,
-            Boolean profileHiddenFlag,
-            Pageable pageable);
+    Page<MemberSummaryResponse> getAllMembers(String username, String specialization, Boolean profileHiddenFlag, Pageable pageable);
 
     MemberFullResponse getMemberById(Long id);
 
@@ -37,13 +34,11 @@ public interface MemberService {
 
     void deleteMemberByUsername(String username);
 
-    void memberChangeAvatar(String username, MemberChangeAvatarRequest avatar);
+    void memberChangeAvatar(String username, MultipartFile file);
 
-    MemberFullResponse memberChangePersonalInfo(
-            String username, MemberProfileDataRequest profileDataRequest);
+    MemberFullResponse memberChangePersonalInfo(String username, MemberProfileDataRequest profileDataRequest);
 
-    MemberFullResponse changeMemberProfileVisibility(
-            MemberChangeProfileVisibilityRequest request, String username);
+    MemberFullResponse changeMemberProfileVisibility(MemberChangeProfileVisibilityRequest request, String username);
 
     Page<MemberSummaryResponse> searchMembersByName(String name, Pageable pageable);
 }

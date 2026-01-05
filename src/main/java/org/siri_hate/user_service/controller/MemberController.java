@@ -19,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @Validated
@@ -127,11 +128,10 @@ public class MemberController {
     }
 
     @PatchMapping("/me/avatar")
-    public ResponseEntity<String> changeMemberAvatar(
-            @RequestBody @Valid MemberChangeAvatarRequest avatar) {
+    public ResponseEntity<String> changeMemberAvatar(@RequestPart("file") MultipartFile file) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        memberService.memberChangeAvatar(username, avatar);
+        memberService.memberChangeAvatar(username, file);
         return new ResponseEntity<>("Avatar has been successfully changed", HttpStatus.OK);
     }
 

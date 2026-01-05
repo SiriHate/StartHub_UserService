@@ -1,15 +1,16 @@
 package org.siri_hate.user_service.model.dto.response.user;
 
+import org.siri_hate.user_service.model.enums.UserRole;
+
 public class CurrentUserResponse {
 
     private Long id;
     private String username;
-    private String role;
+    private UserRole role;
 
-    public CurrentUserResponse() {
-    }
+    public CurrentUserResponse() {}
 
-    public CurrentUserResponse(Long id, String username, String role) {
+    public CurrentUserResponse(Long id, String username, UserRole role) {
         this.id = id;
         this.username = username;
         this.role = role;
@@ -31,11 +32,11 @@ public class CurrentUserResponse {
         this.username = username;
     }
 
-    public String getRole() {
+    public UserRole getRole() {
         return role;
     }
 
-    public void setRole(String role) {
+    public void setRole(UserRole role) {
         this.role = role;
     }
 }

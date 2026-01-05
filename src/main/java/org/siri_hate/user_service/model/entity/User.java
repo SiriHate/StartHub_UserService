@@ -1,6 +1,7 @@
 package org.siri_hate.user_service.model.entity;
 
 import jakarta.persistence.*;
+import org.siri_hate.user_service.model.enums.UserRole;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Objects;
@@ -12,26 +13,24 @@ public abstract class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
     private Long id;
 
-    @Column(name = "username", unique = true)
+    @Column(unique = true)
     private String username;
 
-    @Column(name = "password", nullable = false)
+    @Column(nullable = false)
     private String password;
 
-    @Column(name = "role", nullable = false)
-    private String role;
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
 
     @Column(name = "account_enabled", nullable = false)
-    private boolean isEnabled;
+    private boolean isEnabled = true;
 
-    public User() {
-    }
+    public User() {}
 
-    public User(Long id, String username, String password, String role, boolean isEnabled) {
-        this.id = id;
+    public User (String username, String password, UserRole role, boolean isEnabled) {
         this.username = username;
         this.password = password;
         this.role = role;
@@ -64,11 +63,11 @@ public abstract class User implements UserDetails {
         this.password = password;
     }
 
-    public String getRole() {
+    public UserRole getRole() {
         return role;
     }
 
-    public void setRole(String role) {
+    public void setRole(UserRole role) {
         this.role = role;
     }
 

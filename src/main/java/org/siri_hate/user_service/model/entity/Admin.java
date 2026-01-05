@@ -13,17 +13,14 @@ public class Admin extends User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
     private Long id;
 
-    @Column(name = "name")
     private String name;
 
     public Admin() {
     }
 
-    public Admin(Long id, String name) {
-        this.id = id;
+    public Admin(String name) {
         this.name = name;
     }
 

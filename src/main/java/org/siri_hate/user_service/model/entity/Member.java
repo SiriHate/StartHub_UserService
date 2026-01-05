@@ -2,6 +2,7 @@ package org.siri_hate.user_service.model.entity;
 
 import jakarta.persistence.*;
 import org.siri_hate.user_service.model.enums.AuthType;
+import org.siri_hate.user_service.model.enums.UserRole;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.time.LocalDate;
@@ -15,29 +16,27 @@ public class Member extends User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
     private Long id;
 
     @Column(name = "avatar_url")
     private String avatarUrl;
 
-    @Column(name = "name", nullable = false)
+    @Column(nullable = false)
     private String name;
 
     @ManyToOne
     @JoinColumn(name = "specialization_id")
     private SpecialistSpecialization specialization;
 
-    @Column(name = "about")
     private String about;
 
-    @Column(name = "email", nullable = false, unique = true)
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "phone", nullable = false, unique = true)
+    @Column(nullable = false, unique = true)
     private String phone;
 
-    @Column(name = "birthday", nullable = false)
+    @Column(nullable = false)
     private LocalDate birthday;
 
     @Column(name = "is_hidden", nullable = false)
@@ -47,14 +46,12 @@ public class Member extends User {
     @Column(name = "auth_type", nullable = false)
     private AuthType authType;
 
-    public Member() {
-    }
+    public Member() {}
 
     public Member(
-            Long id,
             String username,
             String password,
-            String role,
+            UserRole role,
             Boolean isEnabled,
             String avatarUrl,
             String name,
@@ -66,8 +63,7 @@ public class Member extends User {
             Boolean profileHiddenFlag,
             AuthType authType
     ) {
-        super(id, username, password, role, isEnabled);
-        this.id = id;
+        super(username, password, role, isEnabled);
         this.avatarUrl = avatarUrl;
         this.name = name;
         this.specialization = specialization;

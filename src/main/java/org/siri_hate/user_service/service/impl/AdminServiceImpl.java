@@ -23,11 +23,8 @@ import java.util.Optional;
 public class AdminServiceImpl implements AdminService {
 
     final private AdminRepository adminRepository;
-
     final private AdminMapper adminMapper;
-
     final private PasswordEncoder passwordEncoder;
-
     final private KafkaProducerService kafkaProducerService;
 
     @Autowired

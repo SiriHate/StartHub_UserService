@@ -1,6 +1,7 @@
 package org.siri_hate.user_service.model.entity;
 
 import jakarta.persistence.*;
+import org.siri_hate.user_service.model.enums.UserRole;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Collection;
@@ -13,27 +14,24 @@ public class Moderator extends User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
     private Long id;
 
-    @Column(name = "name", nullable = false)
+    @Column(nullable = false)
     private String name;
 
     @Column(name = "employee_id", nullable = false, unique = true)
     private Long employeeId;
 
-    public Moderator() {
-    }
+    public Moderator() {}
 
     public Moderator(
-            Long id,
             String username,
             String password,
-            String role,
+            UserRole role,
             boolean isEnabled,
             String name,
             Long employeeId) {
-        super(id, username, password, role, isEnabled);
+        super(username, password, role, isEnabled);
         this.name = name;
         this.employeeId = employeeId;
     }

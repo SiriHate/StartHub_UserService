@@ -3,7 +3,7 @@ package org.siri_hate.user_service.service.impl;
 import org.siri_hate.user_service.model.messages.ConfirmationMessage;
 import org.siri_hate.user_service.model.messages.NotificationMessage;
 import org.siri_hate.user_service.model.messages.ProjectUpdateNotification;
-import org.siri_hate.user_service.model.dto.kafka.UserDeletionMessage;
+import org.siri_hate.user_service.model.messages.UserDeletionMessage;
 import org.siri_hate.user_service.service.KafkaProducerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

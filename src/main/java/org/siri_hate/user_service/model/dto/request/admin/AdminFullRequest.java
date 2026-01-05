@@ -3,13 +3,10 @@ package org.siri_hate.user_service.model.dto.request.admin;
 public class AdminFullRequest {
 
     private String username;
-
     private String password;
-
     private String name;
 
-    public AdminFullRequest() {
-    }
+    public AdminFullRequest() {}
 
     public AdminFullRequest(String username, String password, String name) {
         this.username = username;
